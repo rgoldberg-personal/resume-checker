@@ -283,7 +283,8 @@ APP_VERSION=1.0.0
 |------|---------|
 | `config/scoring_weights.yaml` | Sub-score weights (must sum to 100); validated at startup |
 | `config/salary_bands.yaml` | Fallback salary bands per role category and seniority tier |
-| `config/role_mappings.yaml` | Maps CV role titles and skills to canonical role category slugs |
+
+Role classification is handled by the LLM during CV extraction — no static mapping file needed.
 
 These files can be edited without changing any code. The application reads them at startup.
 
@@ -483,8 +484,7 @@ resume_checker_app/
 │
 ├── config/
 │   ├── scoring_weights.yaml    # Sub-score weights (must sum to 100)
-│   ├── salary_bands.yaml       # Fallback salary bands
-│   └── role_mappings.yaml      # Role title → category slug mapping
+│   └── salary_bands.yaml       # Fallback salary bands
 │
 ├── frontend/
 │   ├── package.json
