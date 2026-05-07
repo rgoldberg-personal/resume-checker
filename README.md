@@ -129,7 +129,7 @@ If `libmagic` is unavailable, the application starts with a warning and falls ba
 ### 1. Clone and enter the repository
 
 ```bash
-git clone <repo-url> resume_checker_app
+git clone git@github.com:rgoldberg-personal/resume-checker.git resume_checker_app
 cd resume_checker_app
 ```
 
