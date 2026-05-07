@@ -1,0 +1,94 @@
+{
+  "taskId": "task-12",
+  "title": "QA: Verify rich score breakdown feature end-to-end",
+  "description": "Run a full QA pass across the rich score breakdown feature implemented in tasks 8, 9, 10, and 11. Focus on four domains: functional correctness of the new schema and scoring logic, performance, observability, and security.\n\n--- SCOPE ---\nscope: full\n\nFiles to inspect:\n- app/schemas.py — CategoryBreakdown and ScoreBreakdown models\n- app/tasks/compute_score.py — all four helper functions and their CategoryBreakdown output\n- app/llm/prompts.py — updated EXPLANATION_SYSTEM_PROMPT and build_explanation_user_prompt\n- frontend/src/types/api.ts — CategoryBreakdown interface and ScoreBreakdown update\n- frontend/src/components/ScoreGauge.tsx — expandable breakdown UI\n\n--- FUNCTIONAL TESTING ---\n\n1. Schema validation (app/schemas.py):\n   - CategoryBreakdown model accepts valid data with all five fields.\n   - CategoryBreakdown rejects missing required fields with a ValidationError.\n   - ScoreBreakdown.justifications correctly stores CategoryBreakdown objects, not plain strings.\n   - ScoreBreakdown model_validator (total matches sum) still passes with the new justifications type.\n\n2. Scoring logic (app/tasks/compute_score.py):\n   - _compute_experience_score: for 0 years, 6 years, 9.5 years, and 12+ years — verify score, reasoning string format, gap_analysis content (max score case vs gap case), and that all five CategoryBreakdown fields are non-empty strings/lists.\n   - _compute_skills_score: verify with 0 skills (no JD), 10 skills (no JD), 10 skills (with JD that matches 3 skills), and 20+ skills. Verify JD boost is included in reasoning when JD is provided, absent when not.\n   - _compute_education_score: verify all four education_level values (phd, master, bachelor, other) produce correct score and correct gap_analysis (phd should say maximum achieved, etc.).\n   - _compute_role_seniority_score: verify senior keyword detection, mid keyword, junior keyword, unclassified, and management bonus case. Verify reasoning includes title list, tier label, and management status.\n   - compute_score Celery task: verify context['score_breakdown']['justifications'] after model_dump() is a dict of dicts (not dict of strings).\n\n3. Prompt formatting (app/llm/prompts.py):\n   - build_explanation_user_prompt with a fully populated score_breakdown dict (containing CategoryBreakdown dicts) produces a string that contains the labels 'How scored', 'Gap', 'Short path', 'Long path' (or equivalent label text used in the implementation).\n   - Verify the prompt does NOT produce a raw Python dict repr (e.g. no \"{'reasoning':\" strings in the output).\n\n4. TypeScript types (frontend/src/types/api.ts):\n   - CategoryBreakdown interface is exported.\n   - ScoreBreakdown.justifications type is Record<..., CategoryBreakdown> not Record<..., string>.\n   - Run: cd /Users/roman/Documents/Projects/local/resume_checker_app/frontend && pnpm tsc --noEmit\n   - Verify exit code is 0 (no type errors).\n\n5. Frontend UI (frontend/src/components/ScoreGauge.tsx):\n   - useState is imported from 'react'.\n   - expandedRows state and toggleRow function are present.\n   - Each BREAKDOWN_ROWS entry references breakdown.justifications[key] as CategoryBreakdown (not string).\n   - Defensive checks (cat && cat.reasoning) exist before rendering each section.\n   - aria-expanded attribute is set on the toggle button.\n   - Run: cd /Users/roman/Documents/Projects/local/resume_checker_app/frontend && pnpm build\n   - Verify build exits with code 0.\n\n--- PERFORMANCE TESTING ---\n\n- compute_score is a CPU-only task (no I/O). Verify that the additional CategoryBreakdown string construction does not introduce any loops over large collections (e.g. skills list iteration is O(n) and bounded by max_pts/20 logic — acceptable).\n- Confirm no new file I/O, network calls, or subprocess spawning was introduced in compute_score.py.\n\n--- OBSERVABILITY TESTING ---\n\n- Verify that if context['score_breakdown'] is malformed (missing a justification key), generate_explanation.py handles it gracefully via the existing .get() calls and does not raise an unhandled KeyError.\n- Check that the new CategoryBreakdown fields do not contain PII (they are formula-based strings and generic advice — verify no candidate name, email, or phone appears in the static text templates).\n\n--- SECURITY TESTING ---\n\n- The CategoryBreakdown fields are generated from numeric inputs and static strings, not from raw CV text. Verify that none of the five fields in any helper function directly interpolates unsanitised CV text content (role_titles list is interpolated into reasoning — check that this is bounded and does not risk overly long strings that could bloat the Redis payload).\n- Verify role_titles interpolation is bounded: if role_titles is very long (e.g. 50 titles), the reasoning string could become large. Check if there is a sensible cap (e.g. show first 5 titles only) or at minimum note as a finding if no cap exists.\n\n--- REPORT FORMAT ---\nPopulate the report field in this task JSON with findings. For each finding include: id, domain, severity, filePath, lineNumber (approximate), description, recommendation.",
+  "assignment": "agent-qa",
+  "tier": ["Free"],
+  "priority": "medium",
+  "dependencies": ["task-8", "task-9", "task-10", "task-11"],
+  "status": "completed",
+  "scope": "full",
+  "report": {
+    "summary": {
+      "passed": 62,
+      "failed": 0,
+      "skipped": 0,
+      "newTestsWritten": 62,
+      "notes": "5 pre-existing integration test failures in tests/integration/test_mcp_tools.py are unrelated to the rich breakdown feature (stale hardcoded 2025 salary/year/role-count expectations). TypeScript type-check exits 0. Frontend build exits 0 (one chunk-size advisory warning, not an error)."
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "domain": "security",
+        "severity": "medium",
+        "filePath": "app/tasks/compute_score.py",
+        "lineNumber": 274,
+        "description": "role_titles interpolation into the reasoning string is unbounded. The line `f\"Titles: {role_titles}.\"` renders the full Python list repr of role_titles into CategoryBreakdown.reasoning. For a candidate with 50 job titles (e.g. a contractor with many short engagements), this string can be several kilobytes. The reasoning value is then stored in Redis, included verbatim in the LLM explanation prompt, and returned in the API response payload. No cap or truncation exists.",
+        "recommendation": "Truncate the title list before interpolation, e.g. show only the first 5 titles: `titles_preview = role_titles[:5]`, then append `f\" (+{len(role_titles)-5} more)\"` if there are more. This bounds the reasoning string and keeps Redis/LLM prompt payload sizes predictable."
+      },
+      {
+        "id": "F2",
+        "domain": "security",
+        "severity": "medium",
+        "filePath": "app/llm/prompts.py",
+        "lineNumber": 94,
+        "description": "`build_explanation_user_prompt` appends `parsed_cv_summary` as a raw Python dict repr (`f\"CV Summary: {parsed_cv_summary}\"`). The cv_summary dict includes `role_titles` (a list of candidate-supplied title strings) and optionally a `job_description_snippet`. This means candidate-originated text is embedded in the LLM prompt using Python's default string representation, which is both LLM-unfriendly and bypasses any structured sanitisation.",
+        "recommendation": "Format `parsed_cv_summary` explicitly, similar to how category justifications are formatted — iterate over keys with labelled lines. At minimum, join list fields with commas rather than using Python list repr. Example: `f\"  Role titles: {', '.join(parsed_cv_summary.get('role_titles', [])[:5])}\"`."
+      },
+      {
+        "id": "F3",
+        "domain": "observability",
+        "severity": "medium",
+        "filePath": "app/schemas.py",
+        "lineNumber": 158,
+        "description": "`Explanation.raw_llm_response` is included in the `AnalysisResult` model which is serialised and returned in the `JobStatusResponse` API payload (`result.explanation.raw_llm_response`). The TypeScript type in `api.ts` (line 69) confirms this field reaches the frontend. This exposes the raw LLM output (potentially verbose internal reasoning, model artefacts, or prompt injections echoed back) to any API client. The field description says 'never shown to users' but the field is not excluded from serialisation.",
+        "recommendation": "Exclude `raw_llm_response` from the API response by either: (1) adding `model_config = ConfigDict(json_schema_extra=...)` with a custom serialiser that strips the field, or (2) creating a separate `ExplanationResponse` model without `raw_llm_response` used in the API layer. Store `raw_llm_response` only in the internal Redis job store."
+      },
+      {
+        "id": "F4",
+        "domain": "functional",
+        "severity": "low",
+        "filePath": "app/tasks/compute_score.py",
+        "lineNumber": 126,
+        "description": "When a JD boost causes `score` to reach `max_pts` (but `base` alone would not), `gap_analysis` returns `\"Maximum base score achieved.\"` — the word 'base' is technically inaccurate since the maximum was achieved partly via JD matching, not base skills alone. This could confuse users who see 'Maximum base score' when they have fewer than 20 skills.",
+        "recommendation": "Change the `else` branch message to `\"Maximum score achieved.\"` (remove 'base') to avoid the misleading qualifier, or update it to distinguish clearly: `\"Maximum score achieved (base + JD boost).\"` when job_fit_adjusted is True."
+      },
+      {
+        "id": "F5",
+        "domain": "functional",
+        "severity": "low",
+        "filePath": "app/tasks/compute_score.py",
+        "lineNumber": 96,
+        "description": "JD skill matching uses `s.lower() in jd_words` where `jd_words = set(jd.lower().split())`. Since `split()` tokenises on whitespace, multi-word skills (e.g. 'machine learning', 'natural language processing', 'cloud computing') will never match JD tokens because they exist as a single string in the skills list but would need to appear as a single whitespace-free token in the JD. This systematically under-counts JD skill matches for common multi-word technical skills.",
+        "recommendation": "For each multi-word skill, check if all constituent words appear in `jd_words`, or alternatively use substring matching against the full lowercased JD text: `matched = sum(1 for s in skills if s.lower() in job_description.lower())`."
+      },
+      {
+        "id": "F6",
+        "domain": "observability",
+        "severity": "low",
+        "filePath": "app/tasks/compute_score.py",
+        "lineNumber": 320,
+        "description": "`compute_score` produces no structured log output beyond the `update_job_status` status string. If scoring produces an unexpected result (e.g., a very low score due to missing keys in parsed_cv, or a weight misconfiguration), there is no log record showing the individual sub-scores, weights loaded, or input values. Debugging a production scoring anomaly would require reproducing the full pipeline.",
+        "recommendation": "Add a `logger.debug()` call after computing each sub-score, e.g.: `logger.debug('compute_score exp=%d skills=%d edu=%d role=%d total=%d job_id=%s', exp_score, skills_score, edu_score, role_score, total, job_id)`. This is a no-op in production log levels but invaluable for debug investigations."
+      },
+      {
+        "id": "F7",
+        "domain": "functional",
+        "severity": "info",
+        "filePath": "tests/integration/test_mcp_tools.py",
+        "lineNumber": null,
+        "description": "5 pre-existing integration tests are failing due to hardcoded 2025-era expectations: salary value for software-engineer/senior (expected 90000, got 82269), year fields (expected 2025, got 2026), role count (expected 13, got 18), and a lead salary lower-bound assertion. These failures are unrelated to the rich breakdown feature but represent stale test data that should be addressed.",
+        "recommendation": "Update hardcoded assertions to reflect current salary_bands.yaml values, or replace exact salary assertions with property-based checks (e.g. `result['min_czk'] > 0` and `result['max_czk'] > result['min_czk']`). Replace hardcoded year with `datetime.now().year`. Replace hardcoded role count with `len(list_roles()) >= 13`."
+      },
+      {
+        "id": "F8",
+        "domain": "performance",
+        "severity": "info",
+        "filePath": "app/tasks/compute_score.py",
+        "lineNumber": null,
+        "description": "Positive finding: no file I/O, network calls, or subprocess spawning were introduced in compute_score.py beyond the existing single `_load_weights()` call. All four helper functions are pure CPU computations with O(n) complexity bounded by the skills list size and number of role titles. The JD word-set construction is O(|JD|) and skill matching is O(|skills|) with O(1) set lookups — acceptable for a Celery task with a 10-second time limit.",
+        "recommendation": "No action required. Consider caching the result of `_load_weights()` at module level (e.g. using `functools.lru_cache`) to avoid repeated YAML disk reads on every task invocation."
+      }
+    ]
+  }
+}

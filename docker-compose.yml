@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app                     # mount source for --reload to work
+      - /tmp/uploads:/tmp/uploads  # shared temp upload dir
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      UPLOAD_DIR: /tmp/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app
+      - /tmp/uploads:/tmp/uploads
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      UPLOAD_DIR: /tmp/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "corepack enable pnpm && pnpm install && pnpm dev --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+
+  # Optional: Celery monitoring UI
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: celery -A app.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - monitoring    # only starts with: docker compose --profile monitoring up

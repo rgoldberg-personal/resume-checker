@@ -1,0 +1,114 @@
+# Fallback salary bands (CZK/month)
+# Used when Platy MCP server is unavailable
+# At least 4 role categories x 4 seniority tiers = 16 entries
+
+bands:
+  software-engineer:
+    junior:
+      min_czk: 35000
+      max_czk: 55000
+      source: fallback_bands
+      year: 2025
+    mid:
+      min_czk: 55000
+      max_czk: 90000
+      source: fallback_bands
+      year: 2025
+    senior:
+      min_czk: 90000
+      max_czk: 140000
+      source: fallback_bands
+      year: 2025
+    lead:
+      min_czk: 130000
+      max_czk: 180000
+      source: fallback_bands
+      year: 2025
+
+  data-scientist:
+    junior:
+      min_czk: 38000
+      max_czk: 58000
+      source: fallback_bands
+      year: 2025
+    mid:
+      min_czk: 60000
+      max_czk: 95000
+      source: fallback_bands
+      year: 2025
+    senior:
+      min_czk: 95000
+      max_czk: 145000
+      source: fallback_bands
+      year: 2025
+    lead:
+      min_czk: 135000
+      max_czk: 185000
+      source: fallback_bands
+      year: 2025
+
+  devops-engineer:
+    junior:
+      min_czk: 40000
+      max_czk: 60000
+      source: fallback_bands
+      year: 2025
+    mid:
+      min_czk: 65000
+      max_czk: 100000
+      source: fallback_bands
+      year: 2025
+    senior:
+      min_czk: 100000
+      max_czk: 150000
+      source: fallback_bands
+      year: 2025
+    lead:
+      min_czk: 140000
+      max_czk: 190000
+      source: fallback_bands
+      year: 2025
+
+  data-engineer:
+    junior:
+      min_czk: 37000
+      max_czk: 57000
+      source: fallback_bands
+      year: 2025
+    mid:
+      min_czk: 58000
+      max_czk: 92000
+      source: fallback_bands
+      year: 2025
+    senior:
+      min_czk: 92000
+      max_czk: 142000
+      source: fallback_bands
+      year: 2025
+    lead:
+      min_czk: 130000
+      max_czk: 175000
+      source: fallback_bands
+      year: 2025
+
+  product-manager:
+    junior:
+      min_czk: 42000
+      max_czk: 65000
+      source: fallback_bands
+      year: 2025
+    mid:
+      min_czk: 70000
+      max_czk: 110000
+      source: fallback_bands
+      year: 2025
+    senior:
+      min_czk: 110000
+      max_czk: 160000
+      source: fallback_bands
+      year: 2025
+    lead:
+      min_czk: 150000
+      max_czk: 200000
+      source: fallback_bands
+      year: 2025

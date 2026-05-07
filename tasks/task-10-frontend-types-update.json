@@ -1,0 +1,10 @@
+{
+  "taskId": "task-10",
+  "title": "Frontend: Update TypeScript types for rich score breakdown",
+  "description": "Update frontend/src/types/api.ts to mirror the new backend CategoryBreakdown schema introduced in task-8. This must be done before the ScoreGauge component work in task-11, which depends on these types.\n\n--- CHANGES TO frontend/src/types/api.ts ---\n\n1. Add a new CategoryBreakdown interface BEFORE the ScoreBreakdown interface:\n\n```typescript\nexport interface CategoryBreakdown {\n  reasoning: string;               // HOW the score was calculated (formula + inputs)\n  gap_analysis: string;            // What is missing to reach maximum points\n  improvements: string[];          // 1-3 specific actionable items\n  short_learning_path: string[];   // Quick wins: weeks to 1-2 months\n  long_learning_path: string[];    // Strategic improvements: 3-6 months\n}\n```\n\n2. Update ScoreBreakdown — change the justifications field type:\n\nOLD:\n```typescript\n  justifications: Record<'experience' | 'skills' | 'education' | 'role_seniority', string>;\n```\n\nNEW:\n```typescript\n  justifications: Record<'experience' | 'skills' | 'education' | 'role_seniority', CategoryBreakdown>;\n```\n\nAll other fields in ScoreBreakdown (experience, skills, education, role_seniority, total, job_fit_adjusted) remain unchanged.\n\n--- ACCEPTANCE CRITERIA ---\n- CategoryBreakdown interface is exported from types/api.ts with all five fields typed correctly.\n- ScoreBreakdown.justifications uses Record<..., CategoryBreakdown> not Record<..., string>.\n- No other interfaces in api.ts are modified.\n- TypeScript compiler (pnpm tsc --noEmit from frontend/) reports no type errors introduced by this change. Any pre-existing errors are out of scope.",
+  "assignment": "agent-frontend",
+  "tier": ["Free"],
+  "priority": "high",
+  "dependencies": ["task-7"],
+  "status": "completed"
+}

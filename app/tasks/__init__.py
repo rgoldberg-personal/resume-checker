@@ -1,0 +1,9 @@
+"""Celery tasks for the CV analysis pipeline."""
+from app.tasks.analyze_cv_content import analyze_cv_content  # noqa: F401
+from app.tasks.assemble_output import assemble_output  # noqa: F401
+from app.tasks.compute_score import compute_score  # noqa: F401
+from app.tasks.estimate_salary import estimate_salary  # noqa: F401
+from app.tasks.extract_cv_structure import extract_cv_structure  # noqa: F401
+from app.tasks.generate_explanation import generate_explanation  # noqa: F401
+from app.tasks.ingest_cv import ingest_cv  # noqa: F401
+from app.tasks.score_ats import score_ats  # noqa: F401

@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  rc-redis:
+    image: redis:7-alpine
+    container_name: rc-redis
+    # No host port — internal only (avoids conflict with cdp-redis on 6379)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  rc-backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile.backend
+    container_name: rc-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env.prod
+    environment:
+      REDIS_URL: redis://rc-redis:6379/0
+      UPLOAD_DIR: /tmp/uploads
+    volumes:
+      - rc-uploads:/tmp/uploads
+    depends_on:
+      rc-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  rc-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile.backend
+    container_name: rc-worker
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    env_file:
+      - .env.prod
+    environment:
+      REDIS_URL: redis://rc-redis:6379/0
+      UPLOAD_DIR: /tmp/uploads
+    volumes:
+      - rc-uploads:/tmp/uploads
+    depends_on:
+      rc-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  rc-frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+    container_name: rc-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - rc-backend
+    restart: unless-stopped
+
+volumes:
+  rc-uploads:

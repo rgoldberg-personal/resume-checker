@@ -1,0 +1,96 @@
+{
+  "projectName": "Job Fit & Salary Estimator",
+  "description": "End-to-end CV analysis web app: React frontend + FastAPI backend + Celery pipeline (ingest → extract → score → score_ats → salary → explain → analyze_content → assemble) + Platy MCP server for salary data + GPT-4 via OpenRouter for CV structuring, explanation, content analysis, and ATS scoring.",
+  "totalTasks": 16,
+  "tasksByAgent": {
+    "agent-architect": ["task-7"],
+    "agent-backend": ["task-1", "task-2", "task-3", "task-4", "task-6", "task-8", "task-9", "task-13", "task-15"],
+    "agent-frontend": ["task-5", "task-10", "task-11", "task-14", "task-16"],
+    "agent-mobile-developer": [],
+    "agent-qa": ["task-12"]
+  },
+  "executionOrder": [
+    "task-1",
+    "task-2",
+    "task-4",
+    "task-3",
+    "task-5",
+    "task-6",
+    "task-7",
+    "task-8",
+    "task-10",
+    "task-9",
+    "task-11",
+    "task-12",
+    "task-13",
+    "task-14",
+    "task-15",
+    "task-16"
+  ],
+  "dependencyGraph": {
+    "task-1": [],
+    "task-2": ["task-1"],
+    "task-3": ["task-2"],
+    "task-4": ["task-1"],
+    "task-5": ["task-1"],
+    "task-6": ["task-3", "task-4"],
+    "task-7": [],
+    "task-8": ["task-7"],
+    "task-9": ["task-8"],
+    "task-10": ["task-7"],
+    "task-11": ["task-10"],
+    "task-12": ["task-8", "task-9", "task-10", "task-11"],
+    "task-13": [],
+    "task-14": ["task-13"],
+    "task-15": [],
+    "task-16": ["task-15"]
+  },
+  "parallelGroups": [
+    {
+      "group": 1,
+      "tasks": ["task-7"],
+      "note": "Architecture schema doc must complete before any rich-breakdown implementation."
+    },
+    {
+      "group": 2,
+      "tasks": ["task-8", "task-10"],
+      "note": "Backend scoring enrichment and frontend type update run in parallel — both depend only on task-7."
+    },
+    {
+      "group": 3,
+      "tasks": ["task-9"],
+      "note": "LLM prompt update requires task-8 (CategoryBreakdown schema) to be in place."
+    },
+    {
+      "group": 4,
+      "tasks": ["task-11"],
+      "note": "ScoreGauge UI update requires task-10 (types) to be done."
+    },
+    {
+      "group": 5,
+      "tasks": ["task-12"],
+      "note": "QA full pass runs after all implementation tasks complete."
+    },
+    {
+      "group": 6,
+      "tasks": ["task-13"],
+      "note": "CV Content Analysis backend task — no dependencies, can run in isolation."
+    },
+    {
+      "group": 7,
+      "tasks": ["task-14"],
+      "note": "Frontend ContentAnalysis component — depends on task-13 (schema defines the types)."
+    },
+    {
+      "group": 8,
+      "tasks": ["task-15"],
+      "note": "ATS Scoring backend — new Celery task, new Pydantic models, new prompts, pipeline insertion. No dependencies on other pending tasks."
+    },
+    {
+      "group": 9,
+      "tasks": ["task-16"],
+      "note": "ATS Scoring frontend — new ATSAnalysis component + TypeScript types. Depends on task-15 to know the exact data shape."
+    }
+  ],
+  "notes": "Original 6 tasks (task-1 through task-6) cover initial project build. Tasks task-7 through task-12 cover the rich score breakdown feature enhancement. Tasks task-13 and task-14 cover the CV Content Analysis feature. Tasks task-15 and task-16 cover the new ATS Scoring feature: a non-critical Celery task that runs only when a job description is provided, performing keyword match analysis, requirements mapping, ATS score (0-100), priority gap grouping, and truth-preserving tailoring suggestions; plus the corresponding React component with a radial gauge, keyword table, requirements mapping cards, priority gaps by severity, and tailoring suggestions."
+}

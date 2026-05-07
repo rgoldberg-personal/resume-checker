@@ -1,0 +1,8 @@
+# Scoring sub-score weights
+# All values must sum to exactly 100
+weights:
+  experience: 25      # max points for work experience sub-score
+  skills: 25          # max points for technical skills sub-score
+  education: 15       # max points for education level sub-score
+  role_seniority: 15  # max points for role title / seniority sub-score
+  soft_skills: 20     # max points for soft skills / personality traits sub-score
