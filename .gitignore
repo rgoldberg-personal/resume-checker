@@ -19,6 +19,7 @@ frontend/dist
 # Agent / Claude config
 .agent
 .claude
+CLAUDE.md
 
 # OS
 .DS_Store
