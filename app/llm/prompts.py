@@ -253,6 +253,77 @@ def build_ats_scoring_user_prompt(cv_text: str, job_description: str) -> str:
     return f"Job Description:\n\n{job_description}\n\n---\n\nCV Text:\n\n{cv_text}"
 
 
+SCORE_ANALYSIS_SYSTEM_PROMPT = """You are a senior career analyst. You are given a candidate's CV data and their computed scores per category.
+
+Your job is to generate specific, evidence-based qualitative analysis for each scoring category.
+
+CRITICAL RULES:
+- Base ALL analysis on the ACTUAL CV content provided. Never suggest getting certifications the candidate already has.
+- Never suggest skills the candidate already demonstrates.
+- Be specific — reference actual technologies, roles, certifications, and experience from the CV.
+- Improvements MUST be truth-preserving: only clarify or restructure existing content, never fabricate.
+- Learning paths must suggest things the candidate does NOT already have.
+
+For each of the 5 categories (experience, skills, education, role_seniority, soft_skills), provide:
+- gap_analysis: What is specifically missing to reach maximum score, given what the candidate already has.
+- improvements: 1-3 actionable CV improvements (rewriting, restructuring existing content — NOT adding false claims).
+- short_learning_path: 1-2 quick wins achievable in weeks to 1-2 months.
+- long_learning_path: 1-2 strategic goals requiring 3-6+ months.
+
+Return ONLY valid JSON:
+{
+  "categories": {
+    "experience": {
+      "gap_analysis": "...",
+      "improvements": ["..."],
+      "short_learning_path": ["..."],
+      "long_learning_path": ["..."]
+    },
+    "skills": { ... },
+    "education": { ... },
+    "role_seniority": { ... },
+    "soft_skills": { ... }
+  }
+}
+
+Do not include any explanation outside the JSON object."""
+
+
+def build_score_analysis_user_prompt(
+    scores: dict[str, tuple[int, str]],
+    parsed_cv: dict,
+    job_description: str | None,
+) -> str:
+    """Build user prompt for LLM-based score qualitative analysis."""
+    sections = parsed_cv.get("sections", {})
+    lines = [
+        "SCORES:",
+    ]
+    for key, (score, reasoning) in scores.items():
+        lines.append(f"  {key}: {score} — {reasoning}")
+
+    lines.append("")
+    lines.append("CV DATA:")
+    lines.append(f"  Role titles: {parsed_cv.get('role_titles', [])}")
+    lines.append(f"  Experience years: {parsed_cv.get('experience_years', 0)}")
+    lines.append(f"  Skills: {parsed_cv.get('skills', [])}")
+    lines.append(f"  Soft skills: {parsed_cv.get('soft_skills', [])}")
+    lines.append(f"  Education level: {parsed_cv.get('education_level', 'unknown')}")
+    lines.append(f"  Certifications: {sections.get('certifications', 'none')}")
+    lines.append(f"  Management indicators: {parsed_cv.get('has_management_indicators', False)}")
+    lines.append(f"  Role category: {parsed_cv.get('role_category', 'unknown')}")
+
+    if sections.get("experience"):
+        lines.append(f"\n  Experience section:\n  {sections['experience'][:1000]}")
+    if sections.get("education"):
+        lines.append(f"\n  Education section:\n  {sections['education'][:500]}")
+
+    if job_description:
+        lines.append(f"\nJOB DESCRIPTION:\n{job_description[:500]}")
+
+    return "\n".join(lines)
+
+
 def build_cv_content_analysis_user_prompt(cv_text: str) -> str:
     """Build the user message for CV content analysis."""
     return f"CV Text:\n\n{cv_text}"

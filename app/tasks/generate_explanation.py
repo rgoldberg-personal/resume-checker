@@ -51,12 +51,16 @@ def generate_explanation(self, context: dict) -> dict:  # type: ignore[override]
         job_description: str | None = context.get("job_description")
 
         # Build a safe CV summary (PII stripped)
+        sections = parsed_cv.get("sections", {})
         cv_summary: dict = {
             "experience_years": parsed_cv.get("experience_years", 0),
             "skills": parsed_cv.get("skills", []),
+            "soft_skills": parsed_cv.get("soft_skills", []),
             "education_level": parsed_cv.get("education_level", "unknown"),
+            "certifications": sections.get("certifications", ""),
             "role_titles": parsed_cv.get("role_titles", []),
             "has_management_indicators": parsed_cv.get("has_management_indicators", False),
+            "role_category": parsed_cv.get("role_category", ""),
         }
         if job_description:
             cv_summary["job_description_snippet"] = strip_pii_from_text(job_description[:500])
